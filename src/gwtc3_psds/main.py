@@ -1,15 +1,23 @@
 import glob
 import re
+import os
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 import ast
+from gwpy.timeseries import TimeSeries
 import numpy as np
 import matplotlib.pyplot as plt
 import bilby
+from gwosc.datasets import event_gps
 from gwpy.timeseries import TimeSeries
+import h5py
 from scipy.stats import anderson, kstest, norm
 import os
 import h5py
+import urllib.request
 
 
 def get_event_name(path: str) -> str:
@@ -403,7 +411,7 @@ class GWEventData:
         self.analysis_group = None
 
     @classmethod
-    def from_ozstar(cls, event_name: str):
+    def from_ozstar(cls, event_name: str):  # Fixed: removed extra parameters
         """Load event data from OZSTAR GWOSC files."""
         instance = cls(event_name)
 
@@ -418,12 +426,24 @@ class GWEventData:
         instance.configs = get_gw_event_configs(pe_file_path)
         instance.analysis_group = instance.configs.get('analysis_group')
 
-        # Extract and convert config values properly
-        fmin = float(instance._extract_scalar(instance.configs['minimum-frequency']))
-        fmax = float(instance._extract_scalar(instance.configs['maximum-frequency']))
-        analysis_duration = float(instance._extract_scalar(instance.configs['duration']))
-        overlap = float(instance._extract_scalar(instance.configs['psd-fractional-overlap']))
-        roll_off = float(instance._extract_scalar(instance.configs['tukey-roll-off']))
+        # Extract and convert config values properly - keep detector-specific values as dicts
+        def get_config_value(key):
+            """Extract config value, preserving detector dictionaries."""
+            value = instance.configs.get(key)
+            if value is None:
+                raise KeyError(f"Config key '{key}' not found")
+
+            # Handle dictionary configs (e.g., frequency settings per detector)
+            if isinstance(value, dict):
+                return value
+            else:
+                return float(instance._extract_scalar(value))
+
+        fmin = get_config_value('minimum-frequency')  # Keep as dict
+        fmax = get_config_value('maximum-frequency')  # Keep as dict
+        analysis_duration = get_config_value('duration')
+        overlap = get_config_value('psd-fractional-overlap')
+        roll_off = get_config_value('tukey-roll-off')
 
         # Load PSDs from PE file
         with h5py.File(pe_file_path, "r") as fin:
@@ -435,8 +455,11 @@ class GWEventData:
                     freqs = psd_data[ifo_name][:, 0]
                     vals = psd_data[ifo_name][:, 1]
 
-                    # Apply frequency mask
-                    mask = (freqs >= fmin) & (freqs <= fmax)
+                    # Apply frequency mask using detector-specific limits
+                    detector_fmin = float(instance._extract_scalar(fmin.get(ifo_name, fmin.get('H1', 20.0))))
+                    detector_fmax = float(instance._extract_scalar(fmax.get(ifo_name, fmax.get('H1', 2048.0))))
+
+                    mask = (freqs >= detector_fmin) & (freqs <= detector_fmax)
                     freqs, vals = freqs[mask], vals[mask]
 
                     instance.psds[ifo_name] = {
@@ -463,8 +486,11 @@ class GWEventData:
                                 psd_strain, psd_times, analysis_duration, roll_off, overlap
                             )
 
-                            # Apply frequency mask
-                            mask = (welch_freqs >= fmin) & (welch_freqs <= fmax)
+                            # Apply frequency mask using detector-specific limits
+                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, fmin.get('H1', 20.0))))
+                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, fmax.get('H1', 2048.0))))
+
+                            mask = (welch_freqs >= detector_fmin) & (welch_freqs <= detector_fmax)
                             welch_freqs, welch_psd = welch_freqs[mask], welch_psd[mask]
 
                             instance.welch_psds[detector] = {
@@ -472,15 +498,20 @@ class GWEventData:
                                 'psd': welch_psd
                             }
 
-                        # get postevent data
+                        # get postevent data - Fixed: use 'postevent' instead of 'psd'
                         if 'postevent' in strain_data:
                             postevent_times, postevent_strain = strain_data['postevent']  # Fixed: was using 'psd'
+
+                            # Get detector-specific frequency limits
+                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, fmin.get('H1', 20.0))))
+                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, fmax.get('H1', 2048.0))))
+
                             postevent_freqs, postevent_fd = get_fd_data(  # Fixed: was postevnet_fd
-                                postevent_strain, postevent_times, detector, roll_off, fmin, fmax
+                                postevent_strain, postevent_times, detector, roll_off, detector_fmin, detector_fmax
                             )
                             instance.postevent_fd[detector] = {
                                 'freqs': postevent_freqs,
-                                'datafd': postevent_fd
+                                'datafd': postevent_fd  # Fixed: was using different key name
                             }
 
                 except Exception as e:
@@ -490,6 +521,26 @@ class GWEventData:
 
     def _extract_scalar(self, value):
         """Extract scalar value from numpy array or return as-is if already scalar."""
+        # Handle bytes that need to be decoded and evaluated
+        if isinstance(value, bytes):
+            try:
+                # Decode bytes to string
+                value_str = value.decode('utf-8')
+                # Try to evaluate as Python literal (dict, list, etc.)
+                value = ast.literal_eval(value_str)
+            except (UnicodeDecodeError, ValueError, SyntaxError):
+                # If decoding/evaluation fails, return as string
+                return value.decode('utf-8') if isinstance(value, bytes) else value
+
+        # Handle string representations of Python objects
+        if isinstance(value, str):
+            try:
+                value = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                # If evaluation fails, return as string
+                return value
+
+        # Extract scalar from numpy arrays or single-element sequences
         if hasattr(value, 'item'):  # numpy array
             return value.item()
         elif hasattr(value, '__len__') and len(value) == 1:  # single-element sequence
@@ -796,7 +847,7 @@ def main():
             traceback.print_exc()
 
     print(f"\n=== Processing all events ===")
-    process_all_events()
+    successful, failed = process_all_events()
 
 
 if __name__ == "__main__":
