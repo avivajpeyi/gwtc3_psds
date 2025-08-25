@@ -10,7 +10,6 @@ from gwpy.timeseries import TimeSeries
 from scipy.stats import anderson, kstest, norm
 import os
 import h5py
-import gwpy
 
 
 def get_event_name(path: str) -> str:
@@ -352,19 +351,20 @@ def get_welch_psd(strain_data: np.ndarray, times: np.ndarray,
     return psd.frequencies.value, psd.value
 
 
-def get_fd_data(stain_data: np.ndarray, times: np.ndarray, det: str, roll_off: float, fmin: float, fmax: float):
-    strain_ts = gwpy.timeseries.TimeSeries(stain_data, times=times)
+def get_fd_data(strain_data: np.ndarray, times: np.ndarray, det: str, roll_off: float, fmin: float, fmax: float):
+    """Fixed function with correct variable names and parameters."""
+    strain_ts = TimeSeries(strain_data, times=times)
     ifo = bilby.gw.detector.get_empty_interferometer(det)
     ifo.strain_data.roll_off = roll_off
-    ifo.maximum_frequency = f_f
-    ifo.minimum_frequency = f_i
+    ifo.maximum_frequency = fmax  # Fixed: was f_f
+    ifo.minimum_frequency = fmin  # Fixed: was f_i
     ifo.strain_data.set_from_gwpy_timeseries(strain_ts)
 
     x = ifo.strain_data.frequency_array
     y = ifo.strain_data.frequency_domain_strain
     Ew = np.sqrt(ifo.strain_data.window_factor)
 
-    I = (x >= f_i) & (x <= f_f)
+    I = (x >= fmin) & (x <= fmax)  # Fixed: was f_i and f_f
     return x[I], y[I] / Ew
 
 
@@ -417,11 +417,13 @@ class GWEventData:
         # Load configs
         instance.configs = get_gw_event_configs(pe_file_path)
         instance.analysis_group = instance.configs.get('analysis_group')
-        fmin = instance.configs['minimum-frequency']
-        fmax = instance.configs['maximum-frequency']
-        analysis_duration = instance.configs['duration']
-        overlap = instance.configs['psd-fractional-overlap']
-        roll_off = instance.configs['tukey-roll-off']
+
+        # Extract and convert config values properly
+        fmin = float(instance._extract_scalar(instance.configs['minimum-frequency']))
+        fmax = float(instance._extract_scalar(instance.configs['maximum-frequency']))
+        analysis_duration = float(instance._extract_scalar(instance.configs['duration']))
+        overlap = float(instance._extract_scalar(instance.configs['psd-fractional-overlap']))
+        roll_off = float(instance._extract_scalar(instance.configs['tukey-roll-off']))
 
         # Load PSDs from PE file
         with h5py.File(pe_file_path, "r") as fin:
@@ -472,13 +474,13 @@ class GWEventData:
 
                         # get postevent data
                         if 'postevent' in strain_data:
-                            postevent_times, postevent_strain = strain_data['psd']
-                            postevent_freqs, postevnet_fd = get_fd_data(
+                            postevent_times, postevent_strain = strain_data['postevent']  # Fixed: was using 'psd'
+                            postevent_freqs, postevent_fd = get_fd_data(  # Fixed: was postevnet_fd
                                 postevent_strain, postevent_times, detector, roll_off, fmin, fmax
                             )
                             instance.postevent_fd[detector] = {
                                 'freqs': postevent_freqs,
-                                'datafd': postevnet_fd
+                                'datafd': postevent_fd
                             }
 
                 except Exception as e:
@@ -540,6 +542,14 @@ class GWEventData:
                     det_group.create_dataset("freqs", data=psd_data['freqs'])
                     det_group.create_dataset("psd", data=psd_data['psd'])
 
+            # Save postevent frequency domain data
+            if self.postevent_fd:
+                fd_group = f.create_group("postevent_fd")
+                for detector, fd_data in self.postevent_fd.items():
+                    det_group = fd_group.create_group(detector)
+                    det_group.create_dataset("freqs", data=fd_data['freqs'])
+                    det_group.create_dataset("datafd", data=fd_data['datafd'])
+
             # Save strain data
             if self.strain_data:
                 strain_group = f.create_group("strain_data")
@@ -597,6 +607,16 @@ class GWEventData:
                         'psd': det_group["psd"][:]
                     }
 
+            # Load postevent frequency domain data if present
+            if "postevent_fd" in f:
+                fd_group = f["postevent_fd"]
+                for detector in fd_group.keys():
+                    det_group = fd_group[detector]
+                    instance.postevent_fd[detector] = {
+                        'freqs': det_group["freqs"][:],
+                        'datafd': det_group["datafd"][:]
+                    }
+
             # Load strain data if present
             if "strain_data" in f:
                 strain_group = f["strain_data"]
@@ -628,13 +648,21 @@ class GWEventData:
         for i, detector in enumerate(sorted(self.psds.keys())):
             ax = axes[i]
             psd_data = self.psds[detector]
+
+            # Only proceed if we have the required data
+            if detector not in self.welch_psds or detector not in self.postevent_fd:
+                print(f"Warning: Missing data for {detector}, skipping plot")
+                continue
+
             welch_data = self.welch_psds[detector]
             fd_data = self.postevent_fd[detector]
-            pval_gwtc = get_pval(fd_data['freqs'], fd_data['data_fd'], psd_data['freqs'], np.sqrt(psd_data['psd']))
-            pval_welch = get_pval(fd_data['freqs'], fd_data['data_fd'], welch_data['freqs'], np.sqrt(welch_data['psd']))
+
+            # Calculate p-values
+            pval_gwtc = get_pval(fd_data['freqs'], fd_data['datafd'], psd_data['freqs'], np.sqrt(psd_data['psd']))
+            pval_welch = get_pval(fd_data['freqs'], fd_data['datafd'], welch_data['freqs'], np.sqrt(welch_data['psd']))
 
             # plot postevent FD data
-            ax.loglog(fd_data['freqs'], np.abs(fd_data['data_fd']) ** 2, color='lightgray', alpha=0.4,
+            ax.loglog(fd_data['freqs'], np.abs(fd_data['datafd']) ** 2, color='lightgray', alpha=0.4,
                       label='Postevent Data')
 
             # Plot GWTC PSD
@@ -642,11 +670,10 @@ class GWEventData:
                       color=colors[detector], linewidth=1.5,
                       label=f'GWTC PSD (pval={pval_gwtc:.3f})')
 
-            # Plot Welch PSD if available and requested
-
+            # Plot Welch PSD
             ax.loglog(welch_data['freqs'], welch_data['psd'],
                       color=colors[detector], linewidth=2, linestyle='--', alpha=0.3,
-                      label=f'Welch PSD (pval={pval_welch})')
+                      label=f'Welch PSD (pval={pval_welch:.3f})')
 
             ax.set_ylabel("PSD [strain²/Hz]", fontsize=12)
             ax.set_title(f"{detector} Power Spectral Density", fontsize=12)
@@ -675,19 +702,20 @@ class GWEventData:
         plt.close()
 
 
-def process_and_save_event(event_name: str, output_dir: str = "event_data",
-                           fmin: float = 20.0, fmax: float = 2048.0) -> str:
+def process_and_save_event(event_name: str, output_dir: str = "event_data") -> str:  # Fixed: removed extra parameters
     """Process a single event and save to HDF5."""
     try:
-        # Load from OZSTAR
-        event_data = GWEventData.from_ozstar(event_name, fmin, fmax)
+        # Load from OZSTAR - Fixed: removed extra parameters
+        event_data = GWEventData.from_ozstar(event_name)
 
         # Save to HDF5
         filepath = event_data.to_hdf5(output_dir)
 
         # Generate plots
         event_data.plot_psds(output_dir)
-        if event_data.strain_data:
+
+        # Only plot strain if we have the data and the method exists
+        if event_data.strain_data and hasattr(event_data, 'plot_strain'):
             event_data.plot_strain('analysis', output_dir, time_window=10.0)  # 10s window
             event_data.plot_strain('psd', output_dir)
 
@@ -702,20 +730,19 @@ def process_and_save_event(event_name: str, output_dir: str = "event_data",
         return None
 
 
-def process_all_events(output_dir: str = "event_data", fmin: float = 20.0, fmax: float = 2048.0):
+def process_all_events(output_dir: str = "event_data"):  # Fixed: removed extra parameters
     """Process all available events and save to individual HDF5 files."""
     pe_paths = get_pe_paths()
 
     print(f"Found {len(pe_paths)} events to process")
     print(f"Output directory: {output_dir}")
-    print(f"Frequency range: {fmin} - {fmax} Hz")
     print("=" * 50)
 
     successful = []
     failed = []
 
     for event_name in tqdm(pe_paths.keys(), desc="Processing events"):
-        filepath = process_and_save_event(event_name, output_dir, fmin, fmax)
+        filepath = process_and_save_event(event_name, output_dir)  # Fixed: removed extra parameters
         if filepath:
             successful.append(event_name)
         else:
@@ -748,7 +775,7 @@ def main():
         print(f"Processing: {first_event}")
 
         try:
-            # Load from OZSTAR with strain data
+            # Load from OZSTAR with strain data - Fixed: removed extra parameters
             event_data = GWEventData.from_ozstar(first_event)
 
             # Save to HDF5
@@ -765,9 +792,11 @@ def main():
 
         except Exception as e:
             print(f"Error in examples: {e}")
+            import traceback
+            traceback.print_exc()
 
     print(f"\n=== Processing all events ===")
-    successful, failed = process_all_events()
+    process_all_events()
 
 
 if __name__ == "__main__":
