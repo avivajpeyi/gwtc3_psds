@@ -91,6 +91,3 @@ def main():
     print(f"\n=== Processing all events ===")
     process_all_events()
 
-
-if __name__ == "__main__":
-    main()

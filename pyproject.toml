@@ -127,3 +127,8 @@ title = "gwtc3_psds Coverage Test Report"
 [[tool.mypy.overrides]]
 module = "matplotlib.*,scipy.*,numba.*,bilby.*"
 ignore_missing_imports = true
+
+
+
+[project.scripts]
+gwtc3_psds = "gwtc3_psds.main:main"
