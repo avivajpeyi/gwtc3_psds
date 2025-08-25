@@ -3,407 +3,767 @@
     <html lang="en">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>LVK PSD Gallery</title>
       <style>
+        * {
+          box-sizing: border-box;
+        }
         body {
-          font-family: Arial, sans-serif;
-          margin: 20px;
-          background: #f9fafc;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+        }
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+          color: white;
+          padding: 30px;
+          text-align: center;
         }
         h1 {
-          text-align: center;
-          margin-bottom: 20px;
+          margin: 0;
+          font-size: 2.5em;
+          font-weight: 300;
         }
-        table {
-          width: 100%;
-          border-collapse: collapse;
+        .subtitle {
+          margin-top: 10px;
+          opacity: 0.9;
+          font-size: 1.1em;
         }
-        td {
+        .gallery-container {
+          padding: 30px;
+        }
+        .gallery {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 25px;
+          margin-top: 20px;
+        }
+        .psd-item {
+          background: #f8f9fa;
+          border-radius: 12px;
+          padding: 20px;
           text-align: center;
-          padding: 15px;
-          vertical-align: top;
+          transition: all 0.3s ease;
+          border: 2px solid transparent;
+          position: relative;
+          overflow: hidden;
+        }
+        .psd-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #667eea, #764ba2);
+          transform: scaleX(0);
+          transition: transform 0.3s ease;
+        }
+        .psd-item:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+          border-color: #667eea;
+        }
+        .psd-item:hover::before {
+          transform: scaleX(1);
+        }
+        .image-container {
+          position: relative;
+          margin-bottom: 15px;
         }
         img {
-          max-width: 250px;
+          max-width: 400px;
+          width: 100%;
+          height: auto;
           border-radius: 8px;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease;
+          cursor: pointer;
+        }
+        img:hover {
+          transform: scale(1.02);
         }
         .caption {
+          font-size: 16px;
+          font-weight: 500;
+          color: #2c3e50;
+          margin-top: 10px;
+          word-break: break-word;
+        }
+        .stats {
+          background: #e9ecef;
+          padding: 20px;
+          text-align: center;
+          color: #495057;
           font-size: 14px;
-          margin-top: 8px;
-          color: #333;
+        }
+        .lightbox {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0,0,0,0.9);
+          cursor: pointer;
+        }
+        .lightbox-content {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          max-width: 90%;
+          max-height: 90%;
+          border-radius: 8px;
+        }
+        .close {
+          position: absolute;
+          top: 20px;
+          right: 35px;
+          color: white;
+          font-size: 40px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+        @media (max-width: 768px) {
+          .gallery {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .container {
+            margin: 10px;
+            border-radius: 8px;
+          }
+          .header {
+            padding: 20px;
+          }
+          h1 {
+            font-size: 2em;
+          }
         }
       </style>
     </head>
     <body>
-      <h1>LVK Power Spectral Densities (PSDs)</h1>
-      <table>
-    <tr>
+      <div class="container">
+        <div class="header">
+          <h1>LVK Power Spectral Densities</h1>
+          <div class="subtitle">Bayesline vs welch</div>
+          <div style="margin-top: 10px; opacity: 0.8; font-size: 0.9em;">
+            Generated on August 25, 2025 at 06:29 PM
+          </div>
+        </div>
 
-          <td>
-            <img src="GW150914_095045_psd.png" alt="GW150914_095045">
-            <div class="caption">GW150914_095045</div>
-          </td>
+        <div class="gallery-container">
+          <div class="gallery">
+    
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW150914_095045_psd.png" alt="Gw150914 095045" onclick="openLightbox('GW150914_095045_psd.png', 'Gw150914 095045')">
+              </div>
+              <div class="caption">Gw150914 095045</div>
+            </div>
         
-          <td>
-            <img src="GW151012_095443_psd.png" alt="GW151012_095443">
-            <div class="caption">GW151012_095443</div>
-          </td>
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW151012_095443_psd.png" alt="Gw151012 095443" onclick="openLightbox('GW151012_095443_psd.png', 'Gw151012 095443')">
+              </div>
+              <div class="caption">Gw151012 095443</div>
+            </div>
         
-          <td>
-            <img src="GW151226_033853_psd.png" alt="GW151226_033853">
-            <div class="caption">GW151226_033853</div>
-          </td>
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW151226_033853_psd.png" alt="Gw151226 033853" onclick="openLightbox('GW151226_033853_psd.png', 'Gw151226 033853')">
+              </div>
+              <div class="caption">Gw151226 033853</div>
+            </div>
         
-          <td>
-            <img src="GW170104_101158_psd.png" alt="GW170104_101158">
-            <div class="caption">GW170104_101158</div>
-          </td>
-        </tr>
-<tr>
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170104_101158_psd.png" alt="Gw170104 101158" onclick="openLightbox('GW170104_101158_psd.png', 'Gw170104 101158')">
+              </div>
+              <div class="caption">Gw170104 101158</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170729_185629_psd.png" alt="Gw170729 185629" onclick="openLightbox('GW170729_185629_psd.png', 'Gw170729 185629')">
+              </div>
+              <div class="caption">Gw170729 185629</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170809_082821_psd.png" alt="Gw170809 082821" onclick="openLightbox('GW170809_082821_psd.png', 'Gw170809 082821')">
+              </div>
+              <div class="caption">Gw170809 082821</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170814_103043_psd.png" alt="Gw170814 103043" onclick="openLightbox('GW170814_103043_psd.png', 'Gw170814 103043')">
+              </div>
+              <div class="caption">Gw170814 103043</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170818_022509_psd.png" alt="Gw170818 022509" onclick="openLightbox('GW170818_022509_psd.png', 'Gw170818 022509')">
+              </div>
+              <div class="caption">Gw170818 022509</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW170823_131358_psd.png" alt="Gw170823 131358" onclick="openLightbox('GW170823_131358_psd.png', 'Gw170823 131358')">
+              </div>
+              <div class="caption">Gw170823 131358</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190403_051519_psd.png" alt="Gw190403 051519" onclick="openLightbox('GW190403_051519_psd.png', 'Gw190403 051519')">
+              </div>
+              <div class="caption">Gw190403 051519</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190408_181802_psd.png" alt="Gw190408 181802" onclick="openLightbox('GW190408_181802_psd.png', 'Gw190408 181802')">
+              </div>
+              <div class="caption">Gw190408 181802</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190412_053044_psd.png" alt="Gw190412 053044" onclick="openLightbox('GW190412_053044_psd.png', 'Gw190412 053044')">
+              </div>
+              <div class="caption">Gw190412 053044</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190413_052954_psd.png" alt="Gw190413 052954" onclick="openLightbox('GW190413_052954_psd.png', 'Gw190413 052954')">
+              </div>
+              <div class="caption">Gw190413 052954</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190413_134308_psd.png" alt="Gw190413 134308" onclick="openLightbox('GW190413_134308_psd.png', 'Gw190413 134308')">
+              </div>
+              <div class="caption">Gw190413 134308</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190421_213856_psd.png" alt="Gw190421 213856" onclick="openLightbox('GW190421_213856_psd.png', 'Gw190421 213856')">
+              </div>
+              <div class="caption">Gw190421 213856</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190426_190642_psd.png" alt="Gw190426 190642" onclick="openLightbox('GW190426_190642_psd.png', 'Gw190426 190642')">
+              </div>
+              <div class="caption">Gw190426 190642</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190503_185404_psd.png" alt="Gw190503 185404" onclick="openLightbox('GW190503_185404_psd.png', 'Gw190503 185404')">
+              </div>
+              <div class="caption">Gw190503 185404</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190512_180714_psd.png" alt="Gw190512 180714" onclick="openLightbox('GW190512_180714_psd.png', 'Gw190512 180714')">
+              </div>
+              <div class="caption">Gw190512 180714</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190513_205428_psd.png" alt="Gw190513 205428" onclick="openLightbox('GW190513_205428_psd.png', 'Gw190513 205428')">
+              </div>
+              <div class="caption">Gw190513 205428</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190514_065416_psd.png" alt="Gw190514 065416" onclick="openLightbox('GW190514_065416_psd.png', 'Gw190514 065416')">
+              </div>
+              <div class="caption">Gw190514 065416</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190517_055101_psd.png" alt="Gw190517 055101" onclick="openLightbox('GW190517_055101_psd.png', 'Gw190517 055101')">
+              </div>
+              <div class="caption">Gw190517 055101</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190519_153544_psd.png" alt="Gw190519 153544" onclick="openLightbox('GW190519_153544_psd.png', 'Gw190519 153544')">
+              </div>
+              <div class="caption">Gw190519 153544</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190521_030229_psd.png" alt="Gw190521 030229" onclick="openLightbox('GW190521_030229_psd.png', 'Gw190521 030229')">
+              </div>
+              <div class="caption">Gw190521 030229</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190521_074359_psd.png" alt="Gw190521 074359" onclick="openLightbox('GW190521_074359_psd.png', 'Gw190521 074359')">
+              </div>
+              <div class="caption">Gw190521 074359</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190527_092055_psd.png" alt="Gw190527 092055" onclick="openLightbox('GW190527_092055_psd.png', 'Gw190527 092055')">
+              </div>
+              <div class="caption">Gw190527 092055</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190602_175927_psd.png" alt="Gw190602 175927" onclick="openLightbox('GW190602_175927_psd.png', 'Gw190602 175927')">
+              </div>
+              <div class="caption">Gw190602 175927</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190620_030421_psd.png" alt="Gw190620 030421" onclick="openLightbox('GW190620_030421_psd.png', 'Gw190620 030421')">
+              </div>
+              <div class="caption">Gw190620 030421</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190630_185205_psd.png" alt="Gw190630 185205" onclick="openLightbox('GW190630_185205_psd.png', 'Gw190630 185205')">
+              </div>
+              <div class="caption">Gw190630 185205</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190701_203306_psd.png" alt="Gw190701 203306" onclick="openLightbox('GW190701_203306_psd.png', 'Gw190701 203306')">
+              </div>
+              <div class="caption">Gw190701 203306</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190706_222641_psd.png" alt="Gw190706 222641" onclick="openLightbox('GW190706_222641_psd.png', 'Gw190706 222641')">
+              </div>
+              <div class="caption">Gw190706 222641</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190708_232457_psd.png" alt="Gw190708 232457" onclick="openLightbox('GW190708_232457_psd.png', 'Gw190708 232457')">
+              </div>
+              <div class="caption">Gw190708 232457</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190719_215514_psd.png" alt="Gw190719 215514" onclick="openLightbox('GW190719_215514_psd.png', 'Gw190719 215514')">
+              </div>
+              <div class="caption">Gw190719 215514</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190727_060333_psd.png" alt="Gw190727 060333" onclick="openLightbox('GW190727_060333_psd.png', 'Gw190727 060333')">
+              </div>
+              <div class="caption">Gw190727 060333</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190731_140936_psd.png" alt="Gw190731 140936" onclick="openLightbox('GW190731_140936_psd.png', 'Gw190731 140936')">
+              </div>
+              <div class="caption">Gw190731 140936</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190803_022701_psd.png" alt="Gw190803 022701" onclick="openLightbox('GW190803_022701_psd.png', 'Gw190803 022701')">
+              </div>
+              <div class="caption">Gw190803 022701</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190805_211137_psd.png" alt="Gw190805 211137" onclick="openLightbox('GW190805_211137_psd.png', 'Gw190805 211137')">
+              </div>
+              <div class="caption">Gw190805 211137</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190828_063405_psd.png" alt="Gw190828 063405" onclick="openLightbox('GW190828_063405_psd.png', 'Gw190828 063405')">
+              </div>
+              <div class="caption">Gw190828 063405</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190828_065509_psd.png" alt="Gw190828 065509" onclick="openLightbox('GW190828_065509_psd.png', 'Gw190828 065509')">
+              </div>
+              <div class="caption">Gw190828 065509</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190910_112807_psd.png" alt="Gw190910 112807" onclick="openLightbox('GW190910_112807_psd.png', 'Gw190910 112807')">
+              </div>
+              <div class="caption">Gw190910 112807</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190915_235702_psd.png" alt="Gw190915 235702" onclick="openLightbox('GW190915_235702_psd.png', 'Gw190915 235702')">
+              </div>
+              <div class="caption">Gw190915 235702</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190916_200658_psd.png" alt="Gw190916 200658" onclick="openLightbox('GW190916_200658_psd.png', 'Gw190916 200658')">
+              </div>
+              <div class="caption">Gw190916 200658</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190925_232845_psd.png" alt="Gw190925 232845" onclick="openLightbox('GW190925_232845_psd.png', 'Gw190925 232845')">
+              </div>
+              <div class="caption">Gw190925 232845</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190926_050336_psd.png" alt="Gw190926 050336" onclick="openLightbox('GW190926_050336_psd.png', 'Gw190926 050336')">
+              </div>
+              <div class="caption">Gw190926 050336</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190929_012149_psd.png" alt="Gw190929 012149" onclick="openLightbox('GW190929_012149_psd.png', 'Gw190929 012149')">
+              </div>
+              <div class="caption">Gw190929 012149</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW190930_133541_psd.png" alt="Gw190930 133541" onclick="openLightbox('GW190930_133541_psd.png', 'Gw190930 133541')">
+              </div>
+              <div class="caption">Gw190930 133541</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191103_012549_psd.png" alt="Gw191103 012549" onclick="openLightbox('GW191103_012549_psd.png', 'Gw191103 012549')">
+              </div>
+              <div class="caption">Gw191103 012549</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191105_143521_psd.png" alt="Gw191105 143521" onclick="openLightbox('GW191105_143521_psd.png', 'Gw191105 143521')">
+              </div>
+              <div class="caption">Gw191105 143521</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191109_010717_psd.png" alt="Gw191109 010717" onclick="openLightbox('GW191109_010717_psd.png', 'Gw191109 010717')">
+              </div>
+              <div class="caption">Gw191109 010717</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191113_071753_psd.png" alt="Gw191113 071753" onclick="openLightbox('GW191113_071753_psd.png', 'Gw191113 071753')">
+              </div>
+              <div class="caption">Gw191113 071753</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191126_115259_psd.png" alt="Gw191126 115259" onclick="openLightbox('GW191126_115259_psd.png', 'Gw191126 115259')">
+              </div>
+              <div class="caption">Gw191126 115259</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191127_050227_psd.png" alt="Gw191127 050227" onclick="openLightbox('GW191127_050227_psd.png', 'Gw191127 050227')">
+              </div>
+              <div class="caption">Gw191127 050227</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191129_134029_psd.png" alt="Gw191129 134029" onclick="openLightbox('GW191129_134029_psd.png', 'Gw191129 134029')">
+              </div>
+              <div class="caption">Gw191129 134029</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191204_110529_psd.png" alt="Gw191204 110529" onclick="openLightbox('GW191204_110529_psd.png', 'Gw191204 110529')">
+              </div>
+              <div class="caption">Gw191204 110529</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191204_171526_psd.png" alt="Gw191204 171526" onclick="openLightbox('GW191204_171526_psd.png', 'Gw191204 171526')">
+              </div>
+              <div class="caption">Gw191204 171526</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191215_223052_psd.png" alt="Gw191215 223052" onclick="openLightbox('GW191215_223052_psd.png', 'Gw191215 223052')">
+              </div>
+              <div class="caption">Gw191215 223052</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191216_213338_psd.png" alt="Gw191216 213338" onclick="openLightbox('GW191216_213338_psd.png', 'Gw191216 213338')">
+              </div>
+              <div class="caption">Gw191216 213338</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191219_163120_psd.png" alt="Gw191219 163120" onclick="openLightbox('GW191219_163120_psd.png', 'Gw191219 163120')">
+              </div>
+              <div class="caption">Gw191219 163120</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191222_033537_psd.png" alt="Gw191222 033537" onclick="openLightbox('GW191222_033537_psd.png', 'Gw191222 033537')">
+              </div>
+              <div class="caption">Gw191222 033537</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW191230_180458_psd.png" alt="Gw191230 180458" onclick="openLightbox('GW191230_180458_psd.png', 'Gw191230 180458')">
+              </div>
+              <div class="caption">Gw191230 180458</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200112_155838_psd.png" alt="Gw200112 155838" onclick="openLightbox('GW200112_155838_psd.png', 'Gw200112 155838')">
+              </div>
+              <div class="caption">Gw200112 155838</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200115_042309_psd.png" alt="Gw200115 042309" onclick="openLightbox('GW200115_042309_psd.png', 'Gw200115 042309')">
+              </div>
+              <div class="caption">Gw200115 042309</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200128_022011_psd.png" alt="Gw200128 022011" onclick="openLightbox('GW200128_022011_psd.png', 'Gw200128 022011')">
+              </div>
+              <div class="caption">Gw200128 022011</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200129_065458_psd.png" alt="Gw200129 065458" onclick="openLightbox('GW200129_065458_psd.png', 'Gw200129 065458')">
+              </div>
+              <div class="caption">Gw200129 065458</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200202_154313_psd.png" alt="Gw200202 154313" onclick="openLightbox('GW200202_154313_psd.png', 'Gw200202 154313')">
+              </div>
+              <div class="caption">Gw200202 154313</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200208_130117_psd.png" alt="Gw200208 130117" onclick="openLightbox('GW200208_130117_psd.png', 'Gw200208 130117')">
+              </div>
+              <div class="caption">Gw200208 130117</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200208_222617_psd.png" alt="Gw200208 222617" onclick="openLightbox('GW200208_222617_psd.png', 'Gw200208 222617')">
+              </div>
+              <div class="caption">Gw200208 222617</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200209_085452_psd.png" alt="Gw200209 085452" onclick="openLightbox('GW200209_085452_psd.png', 'Gw200209 085452')">
+              </div>
+              <div class="caption">Gw200209 085452</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200210_092254_psd.png" alt="Gw200210 092254" onclick="openLightbox('GW200210_092254_psd.png', 'Gw200210 092254')">
+              </div>
+              <div class="caption">Gw200210 092254</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200216_220804_psd.png" alt="Gw200216 220804" onclick="openLightbox('GW200216_220804_psd.png', 'Gw200216 220804')">
+              </div>
+              <div class="caption">Gw200216 220804</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200219_094415_psd.png" alt="Gw200219 094415" onclick="openLightbox('GW200219_094415_psd.png', 'Gw200219 094415')">
+              </div>
+              <div class="caption">Gw200219 094415</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200220_061928_psd.png" alt="Gw200220 061928" onclick="openLightbox('GW200220_061928_psd.png', 'Gw200220 061928')">
+              </div>
+              <div class="caption">Gw200220 061928</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200220_124850_psd.png" alt="Gw200220 124850" onclick="openLightbox('GW200220_124850_psd.png', 'Gw200220 124850')">
+              </div>
+              <div class="caption">Gw200220 124850</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200224_222234_psd.png" alt="Gw200224 222234" onclick="openLightbox('GW200224_222234_psd.png', 'Gw200224 222234')">
+              </div>
+              <div class="caption">Gw200224 222234</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200225_060421_psd.png" alt="Gw200225 060421" onclick="openLightbox('GW200225_060421_psd.png', 'Gw200225 060421')">
+              </div>
+              <div class="caption">Gw200225 060421</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200302_015811_psd.png" alt="Gw200302 015811" onclick="openLightbox('GW200302_015811_psd.png', 'Gw200302 015811')">
+              </div>
+              <div class="caption">Gw200302 015811</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200306_093714_psd.png" alt="Gw200306 093714" onclick="openLightbox('GW200306_093714_psd.png', 'Gw200306 093714')">
+              </div>
+              <div class="caption">Gw200306 093714</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200308_173609_psd.png" alt="Gw200308 173609" onclick="openLightbox('GW200308_173609_psd.png', 'Gw200308 173609')">
+              </div>
+              <div class="caption">Gw200308 173609</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200311_115853_psd.png" alt="Gw200311 115853" onclick="openLightbox('GW200311_115853_psd.png', 'Gw200311 115853')">
+              </div>
+              <div class="caption">Gw200311 115853</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200316_215756_psd.png" alt="Gw200316 215756" onclick="openLightbox('GW200316_215756_psd.png', 'Gw200316 215756')">
+              </div>
+              <div class="caption">Gw200316 215756</div>
+            </div>
+        
+            <div class="psd-item">
+              <div class="image-container">
+                <img src="GW200322_091133_psd.png" alt="Gw200322 091133" onclick="openLightbox('GW200322_091133_psd.png', 'Gw200322 091133')">
+              </div>
+              <div class="caption">Gw200322 091133</div>
+            </div>
+        
+          </div>
+        </div>
 
-          <td>
-            <img src="GW170729_185629_psd.png" alt="GW170729_185629">
-            <div class="caption">GW170729_185629</div>
-          </td>
-        
-          <td>
-            <img src="GW170809_082821_psd.png" alt="GW170809_082821">
-            <div class="caption">GW170809_082821</div>
-          </td>
-        
-          <td>
-            <img src="GW170814_103043_psd.png" alt="GW170814_103043">
-            <div class="caption">GW170814_103043</div>
-          </td>
-        
-          <td>
-            <img src="GW170818_022509_psd.png" alt="GW170818_022509">
-            <div class="caption">GW170818_022509</div>
-          </td>
-        </tr>
-<tr>
+        <div class="stats">
+          <strong>80 PSD plots</strong> • 
+          Last updated: 2025-08-25 18:29 • 
+          Click images to view full size
+        </div>
+      </div>
 
-          <td>
-            <img src="GW170823_131358_psd.png" alt="GW170823_131358">
-            <div class="caption">GW170823_131358</div>
-          </td>
-        
-          <td>
-            <img src="GW190403_051519_psd.png" alt="GW190403_051519">
-            <div class="caption">GW190403_051519</div>
-          </td>
-        
-          <td>
-            <img src="GW190408_181802_psd.png" alt="GW190408_181802">
-            <div class="caption">GW190408_181802</div>
-          </td>
-        
-          <td>
-            <img src="GW190412_053044_psd.png" alt="GW190412_053044">
-            <div class="caption">GW190412_053044</div>
-          </td>
-        </tr>
-<tr>
+      <!-- Lightbox -->
+      <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <span class="close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img">
+      </div>
 
-          <td>
-            <img src="GW190413_052954_psd.png" alt="GW190413_052954">
-            <div class="caption">GW190413_052954</div>
-          </td>
-        
-          <td>
-            <img src="GW190413_134308_psd.png" alt="GW190413_134308">
-            <div class="caption">GW190413_134308</div>
-          </td>
-        
-          <td>
-            <img src="GW190421_213856_psd.png" alt="GW190421_213856">
-            <div class="caption">GW190421_213856</div>
-          </td>
-        
-          <td>
-            <img src="GW190426_190642_psd.png" alt="GW190426_190642">
-            <div class="caption">GW190426_190642</div>
-          </td>
-        </tr>
-<tr>
+      <script>
+        function openLightbox(src, alt) {
+          document.getElementById('lightbox').style.display = 'block';
+          document.getElementById('lightbox-img').src = src;
+          document.getElementById('lightbox-img').alt = alt;
+          document.body.style.overflow = 'hidden';
+        }
 
-          <td>
-            <img src="GW190503_185404_psd.png" alt="GW190503_185404">
-            <div class="caption">GW190503_185404</div>
-          </td>
-        
-          <td>
-            <img src="GW190512_180714_psd.png" alt="GW190512_180714">
-            <div class="caption">GW190512_180714</div>
-          </td>
-        
-          <td>
-            <img src="GW190513_205428_psd.png" alt="GW190513_205428">
-            <div class="caption">GW190513_205428</div>
-          </td>
-        
-          <td>
-            <img src="GW190514_065416_psd.png" alt="GW190514_065416">
-            <div class="caption">GW190514_065416</div>
-          </td>
-        </tr>
-<tr>
+        function closeLightbox() {
+          document.getElementById('lightbox').style.display = 'none';
+          document.body.style.overflow = 'auto';
+        }
 
-          <td>
-            <img src="GW190517_055101_psd.png" alt="GW190517_055101">
-            <div class="caption">GW190517_055101</div>
-          </td>
-        
-          <td>
-            <img src="GW190519_153544_psd.png" alt="GW190519_153544">
-            <div class="caption">GW190519_153544</div>
-          </td>
-        
-          <td>
-            <img src="GW190521_030229_psd.png" alt="GW190521_030229">
-            <div class="caption">GW190521_030229</div>
-          </td>
-        
-          <td>
-            <img src="GW190521_074359_psd.png" alt="GW190521_074359">
-            <div class="caption">GW190521_074359</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190527_092055_psd.png" alt="GW190527_092055">
-            <div class="caption">GW190527_092055</div>
-          </td>
-        
-          <td>
-            <img src="GW190602_175927_psd.png" alt="GW190602_175927">
-            <div class="caption">GW190602_175927</div>
-          </td>
-        
-          <td>
-            <img src="GW190620_030421_psd.png" alt="GW190620_030421">
-            <div class="caption">GW190620_030421</div>
-          </td>
-        
-          <td>
-            <img src="GW190630_185205_psd.png" alt="GW190630_185205">
-            <div class="caption">GW190630_185205</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190701_203306_psd.png" alt="GW190701_203306">
-            <div class="caption">GW190701_203306</div>
-          </td>
-        
-          <td>
-            <img src="GW190706_222641_psd.png" alt="GW190706_222641">
-            <div class="caption">GW190706_222641</div>
-          </td>
-        
-          <td>
-            <img src="GW190708_232457_psd.png" alt="GW190708_232457">
-            <div class="caption">GW190708_232457</div>
-          </td>
-        
-          <td>
-            <img src="GW190719_215514_psd.png" alt="GW190719_215514">
-            <div class="caption">GW190719_215514</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190727_060333_psd.png" alt="GW190727_060333">
-            <div class="caption">GW190727_060333</div>
-          </td>
-        
-          <td>
-            <img src="GW190731_140936_psd.png" alt="GW190731_140936">
-            <div class="caption">GW190731_140936</div>
-          </td>
-        
-          <td>
-            <img src="GW190803_022701_psd.png" alt="GW190803_022701">
-            <div class="caption">GW190803_022701</div>
-          </td>
-        
-          <td>
-            <img src="GW190805_211137_psd.png" alt="GW190805_211137">
-            <div class="caption">GW190805_211137</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190828_063405_psd.png" alt="GW190828_063405">
-            <div class="caption">GW190828_063405</div>
-          </td>
-        
-          <td>
-            <img src="GW190828_065509_psd.png" alt="GW190828_065509">
-            <div class="caption">GW190828_065509</div>
-          </td>
-        
-          <td>
-            <img src="GW190910_112807_psd.png" alt="GW190910_112807">
-            <div class="caption">GW190910_112807</div>
-          </td>
-        
-          <td>
-            <img src="GW190915_235702_psd.png" alt="GW190915_235702">
-            <div class="caption">GW190915_235702</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190916_200658_psd.png" alt="GW190916_200658">
-            <div class="caption">GW190916_200658</div>
-          </td>
-        
-          <td>
-            <img src="GW190925_232845_psd.png" alt="GW190925_232845">
-            <div class="caption">GW190925_232845</div>
-          </td>
-        
-          <td>
-            <img src="GW190926_050336_psd.png" alt="GW190926_050336">
-            <div class="caption">GW190926_050336</div>
-          </td>
-        
-          <td>
-            <img src="GW190929_012149_psd.png" alt="GW190929_012149">
-            <div class="caption">GW190929_012149</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW190930_133541_psd.png" alt="GW190930_133541">
-            <div class="caption">GW190930_133541</div>
-          </td>
-        
-          <td>
-            <img src="GW191103_012549_psd.png" alt="GW191103_012549">
-            <div class="caption">GW191103_012549</div>
-          </td>
-        
-          <td>
-            <img src="GW191105_143521_psd.png" alt="GW191105_143521">
-            <div class="caption">GW191105_143521</div>
-          </td>
-        
-          <td>
-            <img src="GW191127_050227_psd.png" alt="GW191127_050227">
-            <div class="caption">GW191127_050227</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW191204_110529_psd.png" alt="GW191204_110529">
-            <div class="caption">GW191204_110529</div>
-          </td>
-        
-          <td>
-            <img src="GW191204_171526_psd.png" alt="GW191204_171526">
-            <div class="caption">GW191204_171526</div>
-          </td>
-        
-          <td>
-            <img src="GW191215_223052_psd.png" alt="GW191215_223052">
-            <div class="caption">GW191215_223052</div>
-          </td>
-        
-          <td>
-            <img src="GW191222_033537_psd.png" alt="GW191222_033537">
-            <div class="caption">GW191222_033537</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW191230_180458_psd.png" alt="GW191230_180458">
-            <div class="caption">GW191230_180458</div>
-          </td>
-        
-          <td>
-            <img src="GW200112_155838_psd.png" alt="GW200112_155838">
-            <div class="caption">GW200112_155838</div>
-          </td>
-        
-          <td>
-            <img src="GW200128_022011_psd.png" alt="GW200128_022011">
-            <div class="caption">GW200128_022011</div>
-          </td>
-        
-          <td>
-            <img src="GW200129_065458_psd.png" alt="GW200129_065458">
-            <div class="caption">GW200129_065458</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW200202_154313_psd.png" alt="GW200202_154313">
-            <div class="caption">GW200202_154313</div>
-          </td>
-        
-          <td>
-            <img src="GW200208_130117_psd.png" alt="GW200208_130117">
-            <div class="caption">GW200208_130117</div>
-          </td>
-        
-          <td>
-            <img src="GW200209_085452_psd.png" alt="GW200209_085452">
-            <div class="caption">GW200209_085452</div>
-          </td>
-        
-          <td>
-            <img src="GW200216_220804_psd.png" alt="GW200216_220804">
-            <div class="caption">GW200216_220804</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW200219_094415_psd.png" alt="GW200219_094415">
-            <div class="caption">GW200219_094415</div>
-          </td>
-        
-          <td>
-            <img src="GW200220_061928_psd.png" alt="GW200220_061928">
-            <div class="caption">GW200220_061928</div>
-          </td>
-        
-          <td>
-            <img src="GW200224_222234_psd.png" alt="GW200224_222234">
-            <div class="caption">GW200224_222234</div>
-          </td>
-        
-          <td>
-            <img src="GW200225_060421_psd.png" alt="GW200225_060421">
-            <div class="caption">GW200225_060421</div>
-          </td>
-        </tr>
-<tr>
-
-          <td>
-            <img src="GW200302_015811_psd.png" alt="GW200302_015811">
-            <div class="caption">GW200302_015811</div>
-          </td>
-        
-          <td>
-            <img src="GW200311_115853_psd.png" alt="GW200311_115853">
-            <div class="caption">GW200311_115853</div>
-          </td>
-        </tr>
-
-      </table>
+        // Close lightbox with Escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            closeLightbox();
+          }
+        });
+      </script>
     </body>
     </html>
     
