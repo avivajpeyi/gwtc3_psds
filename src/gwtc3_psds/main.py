@@ -122,13 +122,25 @@ def get_specific_configs(file_path: str, h5_config_group_path: str, keys_to_retr
                     if isinstance(obj, h5py.Dataset):
                         content = obj[()]
 
+                        # Handle numpy arrays containing byte strings
+                        if isinstance(content, np.ndarray):
+                            # Extract the first (and usually only) element from the array
+                            if content.size > 0:
+                                content = content.item()  # Extract scalar from array
+                            else:
+                                print(f"Warning: Empty array for key '{key}'")
+                                continue
+
+                        # Handle bytes by decoding first
                         if isinstance(content, bytes):
                             content = content.decode('utf-8')
 
+                        # Try to evaluate as Python literal (dict, list, etc.)
                         try:
                             processed_value = ast.literal_eval(content)
-                        except (ValueError, SyntaxError):
-                            # If literal_eval fails, store as string
+                        except (ValueError, SyntaxError) as e:
+                            print(f"Info: Storing '{key}' as string (couldn't parse as literal)")
+                            # Store as string if it can't be parsed as a Python literal
                             processed_value = content
 
                         configs_dict[key] = processed_value
@@ -341,7 +353,7 @@ def get_welch_psd(strain_data: np.ndarray, times: np.ndarray,
     """
     Calculate Welch PSD estimate from strain data.
 
-    Follows bilby_pipe:
+    Follows bilby_pipe: 
     https://lscsoft.docs.ligo.org/bilby_pipe/master/_modules/bilby_pipe/data_generation.html#DataGenerationInput.__generate_psd
 
     """
@@ -409,6 +421,8 @@ class GWEventData:
         self.welch_psds = {}  # {detector: {'freqs': array, 'psd': array}} - computed from strain
         self.postevent_fd = {}  # {detector: {'freqs': array, 'data_fd': array}}
         self.analysis_group = None
+        self.fmin = {}  # detector-specific minimum frequencies
+        self.fmax = {}  # detector-specific maximum frequencies
 
     @classmethod
     def from_ozstar(cls, event_name: str):  # Fixed: removed extra parameters
@@ -433,9 +447,10 @@ class GWEventData:
             if value is None:
                 raise KeyError(f"Config key '{key}' not found")
 
-            # Handle dictionary configs (e.g., frequency settings per detector)
+            # If it's already a dictionary, return it
             if isinstance(value, dict):
                 return value
+            # If it's a single value, convert to float
             else:
                 return float(instance._extract_scalar(value))
 
@@ -444,6 +459,10 @@ class GWEventData:
         analysis_duration = get_config_value('duration')
         overlap = get_config_value('psd-fractional-overlap')
         roll_off = get_config_value('tukey-roll-off')
+
+        # Store the frequency dicts in the instance for later use
+        instance.fmin = fmin
+        instance.fmax = fmax
 
         # Load PSDs from PE file
         with h5py.File(pe_file_path, "r") as fin:
@@ -712,7 +731,7 @@ class GWEventData:
             pval_gwtc = get_pval(fd_data['freqs'], fd_data['datafd'], psd_data['freqs'], np.sqrt(psd_data['psd']))
             pval_welch = get_pval(fd_data['freqs'], fd_data['datafd'], welch_data['freqs'], np.sqrt(welch_data['psd']))
 
-            # plot postevent FD data
+            # plot postevent FD data 
             ax.loglog(fd_data['freqs'], np.abs(fd_data['datafd']) ** 2, color='lightgray', alpha=0.4,
                       label='Postevent Data')
 
