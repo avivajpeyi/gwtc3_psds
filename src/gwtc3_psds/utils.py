@@ -221,7 +221,7 @@ def get_gw_event_configs(fpath: str, analysis_group: str = None) -> Dict:
 
 
 def _get_data_files_and_gps_times(det: str = "L1") -> Dict[int, str]:
-    search_str = f"/datasets/LIGO/public/gwosc.osgstorage.org/gwdata/O3b/strain.4k/hdf.v1/{det}/*/*.hdf5"
+    search_str = f"/datasets/LIGO/public/gwosc.osgstorage.org/gwdata/*/strain.4k/hdf.v1/{det}/*/*.hdf5"
     files = glob.glob(search_str)
 
     if not files:
