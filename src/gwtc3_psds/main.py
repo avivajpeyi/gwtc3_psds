@@ -29,9 +29,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 DATA_DIR = f"{HERE}/event_data"
 
+
 ############################## UTILITY FUNCTIONS ##############################
-
-
 
 
 def get_event_name(path: str) -> str:
@@ -114,6 +113,35 @@ def extract_psds(outdir: str, fmin: float = 20.0, fmax: float = 2048.0) -> str:
     return outfn
 
 
+def parse_detector_dict(value_str: str) -> Dict[str, float]:
+    """Parse detector dictionary from string format like '{ H1: 20, L1: 20, V1: 20 }'."""
+    try:
+        # First try to parse as a literal
+        parsed = ast.literal_eval(value_str)
+        if isinstance(parsed, dict):
+            return {k: float(v) for k, v in parsed.items()}
+    except (ValueError, SyntaxError):
+        pass
+
+    # Manual parsing for the specific format we see in the data
+    # Remove spaces and braces
+    clean_str = value_str.strip().replace('{', '').replace('}', '').replace(' ', '')
+
+    # Split by commas and parse each detector:value pair
+    detector_dict = {}
+    for pair in clean_str.split(','):
+        if ':' in pair:
+            detector, freq_str = pair.split(':', 1)
+            detector = detector.strip()
+            try:
+                freq = float(freq_str.strip())
+                detector_dict[detector] = freq
+            except ValueError:
+                print(f"Warning: Could not parse frequency value '{freq_str}' for detector '{detector}'")
+
+    return detector_dict
+
+
 def get_specific_configs(file_path: str, h5_config_group_path: str, keys_to_retrieve: List[str]) -> Dict:
     configs_dict = {}
 
@@ -149,13 +177,29 @@ def get_specific_configs(file_path: str, h5_config_group_path: str, keys_to_retr
                         if isinstance(content, bytes):
                             content = content.decode('utf-8')
 
-                        # Try to evaluate as Python literal (dict, list, etc.)
-                        try:
-                            processed_value = ast.literal_eval(content)
-                        except (ValueError, SyntaxError) as e:
-                            print(f"Info: Storing '{key}' as string (couldn't parse as literal)")
-                            # Store as string if it can't be parsed as a Python literal
-                            processed_value = content
+                        # Special handling for frequency dictionaries
+                        if key in ['minimum-frequency', 'maximum-frequency'] and isinstance(content, str):
+                            if '{' in content and ':' in content:
+                                # This looks like a detector dictionary
+                                try:
+                                    processed_value = parse_detector_dict(content)
+                                except Exception as e:
+                                    print(f"Warning: Could not parse detector dict for '{key}': {e}")
+                                    processed_value = content
+                            else:
+                                # Try to parse as a single float
+                                try:
+                                    processed_value = float(content)
+                                except ValueError:
+                                    processed_value = content
+                        else:
+                            # Try to evaluate as Python literal (dict, list, etc.)
+                            try:
+                                processed_value = ast.literal_eval(content)
+                            except (ValueError, SyntaxError) as e:
+                                print(f"Info: Storing '{key}' as string (couldn't parse as literal)")
+                                # Store as string if it can't be parsed as a Python literal
+                                processed_value = content
 
                         configs_dict[key] = processed_value
 
@@ -252,10 +296,9 @@ def _get_data_files_and_gps_times(det: str = "L1") -> Dict[int, str]:
 
     path_dict = {}
     for f in files:
-        match = re.search(r"R1-(\d+)-\d+\.hdf5", f)
-        if match:
-            gps_start = int(match.group(1))
-            path_dict[gps_start] = f
+        fname = os.path.basename(f)
+        gps_start = int(fname.split("-")[-2])
+        path_dict[gps_start] = f
 
     return dict(sorted(path_dict.items()))
 
@@ -271,7 +314,12 @@ def get_fnames_for_range(gps_start: float, gps_end: float, det: str = "L1") -> L
     gps_start = int(gps_start)
     gps_end = int(gps_end)
 
-    gps_files = _get_data_files_and_gps_times(det)
+    try:
+        gps_files = _get_data_files_and_gps_times(det)
+    except FileNotFoundError:
+        print(f"Warning: No strain data files found for detector {det}")
+        return []
+
     start_times = sorted(gps_files.keys())
 
     files = []
@@ -283,6 +331,15 @@ def get_fnames_for_range(gps_start: float, gps_end: float, det: str = "L1") -> L
         # Check if [gps_start, gps_end] intersects with [t0, t1]
         if gps_end > t0 and gps_start < t1:
             files.append(gps_files[t0])
+
+    if not files:
+        print(f"Warning: No files found for {det} in range [{gps_start}, {gps_end}]")
+        print(f"Available time ranges for {det}:")
+        for i, t0 in enumerate(start_times[:5]):  # Show first 5
+            t1 = start_times[i + 1] if i + 1 < len(start_times) else "end"
+            print(f"  {t0} - {t1}")
+        if len(start_times) > 5:
+            print(f"  ... and {len(start_times) - 5} more files")
 
     return files
 
@@ -441,7 +498,7 @@ class GWEventData:
         self.fmax = {}  # detector-specific maximum frequencies
 
     @classmethod
-    def from_ozstar(cls, event_name: str):  # Fixed: removed extra parameters
+    def from_ozstar(cls, event_name: str):
         """Load event data from OZSTAR GWOSC files."""
         instance = cls(event_name)
 
@@ -457,10 +514,12 @@ class GWEventData:
         instance.analysis_group = instance.configs.get('analysis_group')
 
         # Extract and convert config values properly - keep detector-specific values as dicts
-        def get_config_value(key):
+        def get_config_value(key, default_value=None):
             """Extract config value, preserving detector dictionaries."""
-            value = instance.configs.get(key)
+            value = instance.configs.get(key, default_value)
             if value is None:
+                if default_value is not None:
+                    return default_value
                 raise KeyError(f"Config key '{key}' not found")
 
             # If it's already a dictionary, return it
@@ -470,8 +529,23 @@ class GWEventData:
             else:
                 return float(instance._extract_scalar(value))
 
-        fmin = get_config_value('minimum-frequency')  # Keep as dict
-        fmax = get_config_value('maximum-frequency')  # Keep as dict
+        # Get frequency limits - these might be detector-specific dicts or single values
+        fmin_raw = get_config_value('minimum-frequency', 20.0)
+        fmax_raw = get_config_value('maximum-frequency', 2048.0)
+
+        # Convert to detector-specific dictionaries if they aren't already
+        if isinstance(fmin_raw, dict):
+            fmin = fmin_raw
+        else:
+            # Single value - apply to all detectors
+            fmin = {'H1': float(fmin_raw), 'L1': float(fmin_raw)}
+
+        if isinstance(fmax_raw, dict):
+            fmax = fmax_raw
+        else:
+            # Single value - apply to all detectors
+            fmax = {'H1': float(fmax_raw), 'L1': float(fmax_raw)}
+
         analysis_duration = get_config_value('duration')
         overlap = get_config_value('psd-fractional-overlap')
         roll_off = get_config_value('tukey-roll-off')
@@ -491,8 +565,8 @@ class GWEventData:
                     vals = psd_data[ifo_name][:, 1]
 
                     # Apply frequency mask using detector-specific limits
-                    detector_fmin = float(instance._extract_scalar(fmin.get(ifo_name, fmin.get('H1', 20.0))))
-                    detector_fmax = float(instance._extract_scalar(fmax.get(ifo_name, fmax.get('H1', 2048.0))))
+                    detector_fmin = float(instance._extract_scalar(fmin.get(ifo_name, 20.0)))
+                    detector_fmax = float(instance._extract_scalar(fmax.get(ifo_name, 2048.0)))
 
                     mask = (freqs >= detector_fmin) & (freqs <= detector_fmax)
                     freqs, vals = freqs[mask], vals[mask]
@@ -522,8 +596,8 @@ class GWEventData:
                             )
 
                             # Apply frequency mask using detector-specific limits
-                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, fmin.get('H1', 20.0))))
-                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, fmax.get('H1', 2048.0))))
+                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, 20.0)))
+                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, 2048.0)))
 
                             mask = (welch_freqs >= detector_fmin) & (welch_freqs <= detector_fmax)
                             welch_freqs, welch_psd = welch_freqs[mask], welch_psd[mask]
@@ -533,24 +607,32 @@ class GWEventData:
                                 'psd': welch_psd
                             }
 
-                        # get postevent data - Fixed: use 'postevent' instead of 'psd'
+                        # get postevent data
                         if 'postevent' in strain_data:
-                            postevent_times, postevent_strain = strain_data['postevent']  # Fixed: was using 'psd'
+                            postevent_times, postevent_strain = strain_data['postevent']
 
                             # Get detector-specific frequency limits
-                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, fmin.get('H1', 20.0))))
-                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, fmax.get('H1', 2048.0))))
+                            detector_fmin = float(instance._extract_scalar(fmin.get(detector, 20.0)))
+                            detector_fmax = float(instance._extract_scalar(fmax.get(detector, 2048.0)))
 
-                            postevent_freqs, postevent_fd = get_fd_data(  # Fixed: was postevnet_fd
+                            postevent_freqs, postevent_fd = get_fd_data(
                                 postevent_strain, postevent_times, detector, roll_off, detector_fmin, detector_fmax
                             )
                             instance.postevent_fd[detector] = {
                                 'freqs': postevent_freqs,
-                                'datafd': postevent_fd  # Fixed: was using different key name
+                                'datafd': postevent_fd
                             }
 
                 except Exception as e:
                     print(f"  Warning: Could not load strain data for {detector}: {e}")
+                    # Print more debugging info for strain data issues
+                    print(f"    Event configs keys: {list(instance.configs.keys())}")
+                    if 'analysis_start_time' in instance.configs:
+                        print(
+                            f"    Analysis time range: {instance.configs['analysis_start_time']:.1f} - {instance.configs['analysis_end_time']:.1f}")
+                    if 'psd_start_time' in instance.configs:
+                        print(
+                            f"    PSD time range: {instance.configs['psd_start_time']:.1f} - {instance.configs['psd_end_time']:.1f}")
 
         return instance
 
@@ -811,7 +893,7 @@ def process_and_save_event(event_name: str, output_dir: str = DATA_DIR) -> str:
         return None
 
 
-def process_all_events(output_dir: str = DATA_DIR):  # Fixed: removed extra parameters
+def process_all_events(output_dir: str = DATA_DIR):
     """Process all available events and save to individual HDF5 files."""
     pe_paths = get_pe_paths()
 
@@ -823,7 +905,7 @@ def process_all_events(output_dir: str = DATA_DIR):  # Fixed: removed extra para
     failed = []
 
     for event_name in tqdm(pe_paths.keys(), desc="Processing events"):
-        filepath = process_and_save_event(event_name, output_dir)  # Fixed: removed extra parameters
+        filepath = process_and_save_event(event_name, output_dir)
         if filepath:
             successful.append(event_name)
         else:
@@ -855,7 +937,7 @@ def main():
         print(f"Processing: {first_event}")
 
         try:
-            # Load from OZSTAR with strain data - Fixed: removed extra parameters
+            # Load from OZSTAR with strain data
             event_data = GWEventData.from_ozstar(first_event)
 
             # Save to HDF5
